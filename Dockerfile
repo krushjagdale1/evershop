@@ -1,27 +1,30 @@
-# Stage 1: Build frontend React app
-FROM node:18-alpine as frontend-build
-
-WORKDIR /app/packages/frontend
-
-COPY packages/frontend/package.json packages/frontend/package-lock.json ./
-RUN npm install
-
-COPY packages/frontend/ .
-RUN npm run build
-
-# Stage 2: Setup backend and copy frontend build
 FROM node:18-alpine
 
-WORKDIR /app/packages/backend
+WORKDIR /app
 
-COPY packages/backend/package.json packages/backend/package-lock.json ./
-RUN npm install --production
+# Upgrade npm globally (optional)
+RUN npm install -g npm@9
 
-COPY packages/backend/ .
+# Copy package files to install dependencies first (cache layer)
+COPY package*.json ./
 
-# Copy the built frontend from the first stage
-COPY --from=frontend-build /app/packages/frontend/build ./public
+# Copy source code
+COPY packages ./packages
+COPY themes ./themes
+COPY extensions ./extensions
+COPY public ./public
+COPY media ./media
+COPY config ./config
+COPY translations ./translations
 
-EXPOSE 3000
+# Install dependencies
+RUN npm install
 
-CMD ["node", "server.js"]
+# Build the project (frontend + backend build scripts)
+RUN npm run build
+
+# Expose backend port — double-check if it's 80 or 3000
+EXPOSE 80
+
+# Start the backend server (make sure this starts the server correctly)
+CMD ["npm", "run", "start"]
